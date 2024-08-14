@@ -3,7 +3,6 @@ import {
   BatchUpdateDevicePositionCommand,
 } from "@aws-sdk/client-location";
 
-import { Buffer } from "buffer";
 async function putDevicePostion(lon: string, lat: string, deviceId: string) {
   const trackerName: string = String(
     process.env.AMAZON_LOCATION_SERVICE_TRACKER_NAME
