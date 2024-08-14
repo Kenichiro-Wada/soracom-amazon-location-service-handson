@@ -48,7 +48,7 @@ exports.handler = async function (event: any, context: any) {
   const lon: string = event.lon;
   if (lat && lon) {
     // DeviceIdとしてカスタムヘッダーのx-soracom-device-nameにセットされてきた値を利用
-    const deviceName = event["headers"]["x-soracom-device-name"];
+    const deviceName = String(process.env.SORACOM_GPS_MULTI_UNIT_NAME);
     const result = await putDevicePostion(lon, lat, deviceName);
     if (result) {
       return {

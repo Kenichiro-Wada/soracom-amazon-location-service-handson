@@ -2,13 +2,14 @@ import * as cdk from "aws-cdk-lib";
 import * as geo from "aws-cdk-lib/aws-location";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
-import * as cognito from "aws-cdk-lib/aws-cognito";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
 
 export class AmazonLocationServiceHandsonProjectStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+    // Constant
+    const envSoracomGpsMultiNnitName = '[SET_YOUR_DEVICE_NAME]';
     /**
      * Amazon Location Service
      */
@@ -157,6 +158,7 @@ export class AmazonLocationServiceHandsonProjectStack extends cdk.Stack {
         environment: {
           AMAZON_LOCATION_SERVICE_TRACKER_NAME:
             amazonLocationServiceHandsonTracker.trackerName,
+          SORACOM_GPS_MULTI_UNIT_NAME: envSoracomGpsMultiNnitName
         },
       }
     );
