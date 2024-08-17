@@ -39,11 +39,11 @@ exports.sendNotificationHandler = async function (event: any, context: any) {
     const geoFenceId = eventDetail.GeofenceId;
     let geoFenceName = '';
     if (geoFenceId == 'sampleGeoFence001') {
-        geoFenceName == '東京駅';
+        geoFenceName = '東京駅';
     } else if (geoFenceId == 'sampleGeoFence002') {
-        geoFenceName == '銀座駅';
+        geoFenceName = '銀座駅';
     } else {
-        geoFenceName == geoFenceName;
+        geoFenceName = geoFenceId;
     }
     
     const eventType = eventDetail.EventType;
