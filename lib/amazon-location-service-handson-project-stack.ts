@@ -2,6 +2,9 @@ import * as cdk from "aws-cdk-lib";
 import * as geo from "aws-cdk-lib/aws-location";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
 
@@ -9,7 +12,8 @@ export class AmazonLocationServiceHandsonProjectStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
     // Constant
-    const envSoracomGpsMultiNnitName = '[SET_YOUR_DEVICE_NAME]';
+    const envSoracomGpsMultiNnitName = '[SET_YOUR_DEVICE_NAME]'; // 英数字、ハイフン(-)、アンダースコア(_)、ドット(.)のみ利用可能
+    const envLineNotifyToken = '[SET_LINE_NOTIFY_TOKEN]'
     /**
      * Amazon Location Service
      */
@@ -110,7 +114,7 @@ export class AmazonLocationServiceHandsonProjectStack extends cdk.Stack {
       this,
       "BatchUpdateDevicePositionFromGpsMultiUnitBeam",
       {
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_LATEST,
         entry: "lambda/updateDevicePositionBeamHandler.ts",
         handler: "gpsMultiUnitHandler",
         timeout: cdk.Duration.seconds(30),
@@ -148,7 +152,7 @@ export class AmazonLocationServiceHandsonProjectStack extends cdk.Stack {
       this,
       "BatchUpdateDevicePositionFromGpsMultiUnitFunk",
       {
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_LATEST,
         entry: "lambda/updateDevicePositionFunkHandler.ts",
         handler: "handler",
         timeout: cdk.Duration.seconds(30),
@@ -162,9 +166,49 @@ export class AmazonLocationServiceHandsonProjectStack extends cdk.Stack {
         },
       }
     );
-
     batchUpdateDevicePositionFromGpsMultiUnitFunk.addToRolePolicy(
       batchUpdateDevicePositionPolicyStatement
+    );
+    // Notify Lambda
+    const geoFenceNotify = new NodejsFunction(this, 'geoFenceNotify', {
+      runtime: lambda.Runtime.NODEJS_LATEST,
+      entry: "lambda/geoFenceNotifyHandler.ts",
+      handler: "sendNotificationHandler",
+      timeout: cdk.Duration.seconds(30),
+      tracing: lambda.Tracing.ACTIVE,
+      description: 'Geo Fence Notify',
+      environment: {
+        LINE_NOTIFY_TOKEN: envLineNotifyToken,
+      },
+    });
+    /**
+     * SQS DLQ
+     */
+    const geoFenceEventsDlq = new sqs.Queue(
+      this,
+      'amazonLocationServiceGeoFenceEventDlq'
+    );
+    /**
+     * EventBridge Events
+     */
+    const geoFenceEventsRule = new events.Rule(
+      this,
+      'amazonLocationServiceGeoFenceEventRule',
+      {
+        description: 'SORACOM x Amazon Location Service Handson Geofence EventRule',
+        eventPattern: {
+          source: ['aws.geo'],
+          resources: [amazonLocationServiceHandsonGeoFence.attrCollectionArn],
+          detailType: ['Location Geofence Event'],
+        },
+      }
+    );
+    geoFenceEventsRule.addTarget(
+      new targets.LambdaFunction(geoFenceNotify, {
+        deadLetterQueue: geoFenceEventsDlq,
+        maxEventAge: cdk.Duration.hours(2),
+        retryAttempts: 2,
+      })
     );
   }
 }
